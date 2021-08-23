@@ -1,0 +1,54 @@
+#!/bin/bash
+
+echo ' date "+ %y-%m-%d %H:%M:%S"' #start time
+
+# define some suffix
+convertsuffix=.cub
+calsuffix=_cal.cub
+echosuffix=_echo.cub
+mapsuffix=_map.cub
+tifsuffix=.tif
+
+#------------------
+
+# -- get the number of total files -----
+sum=0
+for filename in `ls *.IMG`
+do
+    let sum=sum+1
+done
+
+# -----------------
+
+# -- main loop
+num=1
+for filename in `ls *.IMG`
+do
+    echo "Processing file number: " $num "out of totol file: " $sum
+    echo $filename                               # get the original file name
+    file1=${filename%.*}                       # get the file name without suffix
+
+    convert="$file1$convertsuffix"      # get the file name with convert suffix
+    naccal="$file1$calsuffix"              # get the file name with calibration suffix
+    nacecho="$file1$echosuffix"     # get the file name with echo suffix
+    nacmap="$file1$mapsuffix"      # get the file name with map project
+    tifmap="$file1$tifsuffix"           # get the tif file name with map project
+
+    lronac2isis from=$filename to=$convert
+    spiceinit from=$convert web=yes
+    lronaccal from= $convert to=$naccal 
+    lronacecho from=$naccal to=$nacecho
+    cam2map from=$nacecho to=$nacmap pixres=mpp resolution=0.9
+    gdal_translate -of GTiff $nacmap $tifmap
+
+    #rm $convert
+    #rm $naccal
+    #rm $nacecho
+    #rm $nacmap
+    let num=num+1
+    echo “====================================”
+done
+
+# -------------------------------------------
+
+echo ' date "+ %y-%m-%d %H:%M:%S"'  #end time

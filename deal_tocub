@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# eg:deal_tocub [path1] [path2]
+# Batch process .IMG into .cub,[path1] the file that saves the address ,[path2] output floder
+list=$(cat $1)		
+
+# define some suffix
+convertsuffix=.cub
+calsuffix=_cal.cub
+
+
+#------------------
+
+# -- get the number of total files -----
+sum=0
+for filename in $list
+do
+    let sum=sum+1
+done
+
+# -----------------
+
+# -- main loop
+num=1
+for filename in $list
+do
+    echo "Processing file number: " $num "out of totol file: " $sum
+    echo $filename                               # get the original file name
+    file1=${filename%.*}                       # get the file name without suffix
+    file2=${file1##*/}                      # get the file name without suffix and prefix
+
+    convert="$2/$file2$convertsuffix"    # get the file name with convert suffix
+    naccal="$2/$file2$calsuffix" # get the file name with calibration suffix       
+    
+
+    lronac2isis from=$filename to=$convert
+    spiceinit from=$convert web=yes
+    lronaccal from= $convert to=$naccal
+    lronacecho from=$naccal to=$convert   
+  
+
+    rm $naccal 
+    let num=num+1
+    echo “====================================”
+done

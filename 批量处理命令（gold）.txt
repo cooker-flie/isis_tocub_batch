@@ -1,0 +1,35 @@
+# 将数据批量处理为DEM与DOM数据
+# 需要安装ASP并下载isis的辅助数据（base包及处理的数据对应任务的信息包），辅助数据下载见Github-isis安装页面
+
+#生成文件列表
+ls *.IMG|sed s/.IMG//>cub.lis
+
+#将LROC NAC数据导入到ISIS
+lronac2isis from=\$1.IMG to=\$1.cub -batchlist=cub.lis
+
+#严格几何模型构建  （以下需要base及任务数据包)
+spiceinit from=\$1.cub -batchlist=cub.lis web=yes
+
+#辐射校正
+lronaccal from=\$1.cub to=\$1.cal.cub -batchlist=cub.lis
+
+#回波效应校正
+lronacecho from=\$1.cal.cub to=\$1.cal.echo.cub -batchlist=cub.lis
+
+#地图投影
+cam2map from=\$1.cal.echo.cub to=\$1.cal.echo.map.cub -batchlist=cub.lis
+
+#cub文件转换成TIFF文件
+isis2std from=\$1.cal.echo.cub to=\$1.cal.echo.tif -batchlist=cub.lis
+
+#cub文件转换成TIFF文件可保存坐标信息 （需要安装GDAL 包）
+gdal_translate -of Gtiff $1.cal.echo.cub $1.cal.echo.tif
+
+#光束法平差 （以下需要ASP包）
+bundle_adjust M119815703LE.cal.echo.cub M119808916LE.cal.echo.cub -o run_ba/run         #M1198.......echo.cub为 处理后的文件名，需根据实际情况替换
+
+#立体摄影测量
+stereo M119815703LE.cal.echo.cub M119808916LE.cal.echo.cub results/stereo-output
+
+#生成DEM和DOM
+point2dem -r moon --tr 0.000033 results/stereo-output -PC.tif --orthoimage results/stereo output-L.tif -o dem_results/dem-dom
